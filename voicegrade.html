@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VoiceGrade — Teach It. Know It.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #c8f04d;
+    --accent2: #7c6af7;
+    --accent3: #f04d7a;
+    --text: #f0ede8;
+    --muted: #6b6880;
+    --muted2: #9996aa;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grain */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+  }
+
+  /* Glow blobs */
+  .blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.12;
+  }
+  .blob-1 { width: 500px; height: 500px; background: var(--accent2); top: -100px; left: -100px; }
+  .blob-2 { width: 400px; height: 400px; background: var(--accent); bottom: -80px; right: -80px; }
+
+  /* Layout */
+  .wrap { position: relative; z-index: 1; max-width: 780px; margin: 0 auto; padding: 0 24px; }
+
+  /* Nav */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(20px);
+  }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .logo { font-family: 'Instrument Serif', serif; font-size: 22px; letter-spacing: -0.5px; }
+  .logo span { color: var(--accent); }
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 4px 10px; border-radius: 20px;
+    color: var(--muted2); letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* Hero */
+  .hero { padding: 80px 0 60px; text-align: center; }
+  .hero-tag {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--accent); border: 1px solid rgba(200,240,77,0.3);
+    padding: 6px 14px; border-radius: 20px;
+    margin-bottom: 28px;
+    animation: fadeUp 0.6s ease both;
+  }
+  .hero h1 {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(42px, 7vw, 72px);
+    line-height: 1.05;
+    letter-spacing: -2px;
+    margin-bottom: 20px;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+  .hero h1 em { font-style: italic; color: var(--accent); }
+  .hero p {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px; color: var(--muted2); line-height: 1.7;
+    max-width: 480px; margin: 0 auto 40px;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  /* How it works */
+  .steps {
+    display: flex; gap: 12px; justify-content: center;
+    margin-bottom: 56px;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+  .step {
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'DM Mono', monospace; font-size: 12px;
+    color: var(--muted); padding: 8px 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .step-num {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent2); color: white;
+    font-size: 10px; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* Main card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 36px;
+    animation: fadeUp 0.6s 0.35s ease both;
+  }
+
+  /* Topic input */
+  .field-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 10px; display: block;
+  }
+  .topic-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+    margin-bottom: 28px;
+  }
+  .topic-input:focus { border-color: var(--accent2); }
+  .topic-input::placeholder { color: var(--muted); }
+
+  /* Record section */
+  .record-area { margin-bottom: 28px; }
+  .rec-controls { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+
+  .btn-record {
+    width: 64px; height: 64px; border-radius: 50%;
+    border: none; cursor: pointer;
+    background: var(--accent3);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s, box-shadow 0.15s;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .btn-record:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(240,77,122,0.4); }
+  .btn-record.recording { background: #ff3355; animation: pulse-rec 1.2s ease infinite; }
+  .btn-record svg { width: 24px; height: 24px; fill: white; }
+
+  @keyframes pulse-rec {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,51,85,0.5); }
+    50% { box-shadow: 0 0 0 16px rgba(255,51,85,0); }
+  }
+
+  .rec-status { flex: 1; }
+  .rec-status-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px; color: var(--muted2);
+    margin-bottom: 4px;
+  }
+  .rec-timer {
+    font-family: 'DM Mono', monospace;
+    font-size: 28px; font-weight: 500;
+    color: var(--text); letter-spacing: 0.05em;
+  }
+  .rec-timer.active { color: var(--accent3); }
+
+  /* Waveform */
+  .waveform {
+    height: 48px; border-radius: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    overflow: hidden; display: flex; align-items: center;
+    padding: 0 12px; gap: 2px;
+  }
+  .wave-bar {
+    width: 3px; border-radius: 2px;
+    background: var(--accent2); opacity: 0.3;
+    transition: height 0.1s;
+    height: 4px;
+  }
+  .wave-bar.active { opacity: 0.8; }
+
+  /* Transcript */
+  .transcript-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    min-height: 100px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--muted2);
+    line-height: 1.7;
+    margin-bottom: 8px;
+    white-space: pre-wrap;
+  }
+  .transcript-note {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; color: var(--muted);
+    margin-bottom: 24px;
+  }
+
+  /* Analyze btn */
+  .btn-analyze {
+    width: 100%; padding: 16px;
+    background: var(--accent);
+    color: #0a0a0f;
+    border: none; border-radius: 12px;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px; font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .btn-analyze:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(200,240,77,0.25); }
+  .btn-analyze:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Loading */
+  .loading {
+    display: none; text-align: center; padding: 40px 0;
+  }
+  .loading.visible { display: block; }
+  .spinner {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading p { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--muted2); }
+
+  /* Results */
+  .results { display: none; margin-top: 32px; }
+  .results.visible { display: block; animation: fadeUp 0.5s ease both; }
+
+  .results-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .results-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px; letter-spacing: -0.5px;
+  }
+
+  /* Score ring */
+  .score-ring-wrap { display: flex; flex-direction: column; align-items: center; }
+  .score-ring {
+    width: 80px; height: 80px; position: relative;
+  }
+  .score-ring svg { transform: rotate(-90deg); }
+  .score-ring circle {
+    fill: none; stroke-width: 6;
+    stroke-linecap: round;
+  }
+  .score-ring .track { stroke: var(--border); }
+  .score-ring .fill { stroke: var(--accent); stroke-dasharray: 220; stroke-dashoffset: 220; transition: stroke-dashoffset 1.2s ease; }
+  .score-num {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace; font-weight: 500;
+  }
+  .score-num .big { font-size: 20px; color: var(--text); }
+  .score-num .label { font-size: 9px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+
+  /* Score grade label */
+  .grade-label {
+    margin-top: 8px;
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 20px;
+  }
+  .grade-A { background: rgba(200,240,77,0.15); color: var(--accent); }
+  .grade-B { background: rgba(124,106,247,0.15); color: var(--accent2); }
+  .grade-C { background: rgba(240,77,122,0.15); color: var(--accent3); }
+
+  /* Metric pills */
+  .metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .metric {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 14px;
+    text-align: center;
+  }
+  .metric-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px; font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .metric-lbl {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+
+  /* Sections */
+  .result-section { margin-bottom: 20px; }
+  .result-section-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .result-section-title::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  .summary-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px; line-height: 1.7; color: var(--text);
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 18px;
+  }
+
+  /* Gap chips */
+  .gaps { display: flex; flex-wrap: wrap; gap: 8px; }
+  .gap-chip {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px; padding: 6px 12px; border-radius: 8px;
+    background: rgba(240,77,122,0.1); border: 1px solid rgba(240,77,122,0.2);
+    color: #f07a94;
+  }
+
+  /* Strengths */
+  .strengths { display: flex; flex-wrap: wrap; gap: 8px; }
+  .strength-chip {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px; padding: 6px 12px; border-radius: 8px;
+    background: rgba(200,240,77,0.08); border: 1px solid rgba(200,240,77,0.2);
+    color: #b8df3a;
+  }
+
+  /* Filler words */
+  .filler-list {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .filler-word {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px; padding: 5px 10px; border-radius: 6px;
+    background: rgba(124,106,247,0.1); border: 1px solid rgba(124,106,247,0.2);
+    color: #a89ff7;
+  }
+
+  /* Advice */
+  .advice-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .advice-list li {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px; color: var(--muted2);
+    padding: 12px 16px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; line-height: 1.6;
+    border-left: 3px solid var(--accent2);
+  }
+
+  /* Reset btn */
+  .btn-reset {
+    width: 100%; margin-top: 28px; padding: 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted2); border-radius: 12px;
+    font-family: 'Syne', sans-serif; font-size: 14px;
+    cursor: pointer; transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-reset:hover { border-color: var(--muted2); color: var(--text); }
+
+  /* Footer */
+  footer {
+    text-align: center; padding: 40px 0 32px;
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    color: var(--muted); letter-spacing: 0.05em;
+    border-top: 1px solid var(--border);
+    margin-top: 60px;
+  }
+  footer span { color: var(--accent); }
+
+  /* Error */
+  .error-box {
+    display: none;
+    background: rgba(240,77,122,0.08);
+    border: 1px solid rgba(240,77,122,0.25);
+    border-radius: 12px; padding: 14px 18px;
+    font-family: 'DM Mono', monospace; font-size: 13px;
+    color: #f07a94; margin-top: 16px;
+  }
+  .error-box.visible { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 560px) {
+    .steps { flex-direction: column; align-items: center; }
+    .metrics { grid-template-columns: 1fr 1fr; }
+    .card { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+
+<nav>
+  <div class="wrap">
+    <div class="logo">Voice<span>Grade</span></div>
+    <div class="badge">Beta — Free</div>
+  </div>
+</nav>
+
+<main class="wrap">
+  <div class="hero">
+    <div class="hero-tag">The Feynman Scorer</div>
+    <h1>Teach it.<br/><em>Know it.</em></h1>
+    <p>Explain any topic out loud like you're teaching it. VoiceGrade listens, analyzes, and tells you exactly what you understand — and what you're faking.</p>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div>Pick a topic</div>
+      <div class="step"><div class="step-num">2</div>Record yourself</div>
+      <div class="step"><div class="step-num">3</div>Get your grade</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <!-- Topic -->
+    <label class="field-label">What topic are you explaining?</label>
+    <input class="topic-input" id="topicInput" type="text" placeholder="e.g. Photosynthesis, The French Revolution, Newton's Laws…"/>
+
+    <!-- API Key (since this is a standalone HTML — user brings their own key) -->
+    <label class="field-label">Your Anthropic API Key <span style="color:var(--muted);font-size:10px;">(stored only in your browser, never sent anywhere else)</span></label>
+    <input class="topic-input" id="apiKey" type="password" placeholder="sk-ant-…" style="margin-bottom:28px;font-family:'DM Mono',monospace;font-size:13px;"/>
+
+    <!-- Record -->
+    <div class="record-area">
+      <label class="field-label">Your explanation</label>
+      <div class="rec-controls">
+        <button class="btn-record" id="recordBtn" title="Start recording">
+          <svg id="recIcon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/></svg>
+        </button>
+        <div class="rec-status">
+          <div class="rec-status-text" id="recStatusText">Press to start recording</div>
+          <div class="rec-timer" id="recTimer">0:00</div>
+        </div>
+      </div>
+      <div class="waveform" id="waveform"></div>
+    </div>
+
+    <!-- Transcript -->
+    <label class="field-label">Transcript <span style="color:var(--muted);font-size:10px;">(auto-filled after recording, or type/paste directly)</span></label>
+    <div class="transcript-box" id="transcriptBox" contenteditable="true" spellcheck="false">Your spoken words will appear here automatically after recording. You can also type or paste your explanation directly.</div>
+    <div class="transcript-note" id="transcriptNote">✦ Recording uses your browser's speech recognition (Chrome/Edge works best)</div>
+
+    <!-- Analyze -->
+    <button class="btn-analyze" id="analyzeBtn" disabled>Analyze My Understanding →</button>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <!-- Loading -->
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p>Grading your explanation…</p>
+    </div>
+
+    <!-- Results -->
+    <div class="results" id="results">
+      <div class="results-header">
+        <div class="results-title">Your Grade</div>
+        <div class="score-ring-wrap">
+          <div class="score-ring">
+            <svg width="80" height="80" viewBox="0 0 80 80">
+              <circle class="track" cx="40" cy="40" r="35"/>
+              <circle class="fill" id="scoreCircle" cx="40" cy="40" r="35"/>
+            </svg>
+            <div class="score-num">
+              <span class="big" id="scoreNum">–</span>
+              <span class="label">/ 100</span>
+            </div>
+          </div>
+          <div class="grade-label" id="gradeLabel">–</div>
+        </div>
+      </div>
+
+      <!-- Metrics -->
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-val" id="metClarity" style="color:var(--accent)">–</div>
+          <div class="metric-lbl">Clarity</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val" id="metAccuracy" style="color:var(--accent2)">–</div>
+          <div class="metric-lbl">Accuracy</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val" id="metDepth" style="color:var(--accent3)">–</div>
+          <div class="metric-lbl">Depth</div>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="result-section">
+        <div class="result-section-title">Summary</div>
+        <div class="summary-text" id="summaryText"></div>
+      </div>
+
+      <!-- Strengths -->
+      <div class="result-section">
+        <div class="result-section-title">What you got right</div>
+        <div class="strengths" id="strengthsList"></div>
+      </div>
+
+      <!-- Gaps -->
+      <div class="result-section">
+        <div class="result-section-title">Knowledge gaps detected</div>
+        <div class="gaps" id="gapsList"></div>
+      </div>
+
+      <!-- Filler words -->
+      <div class="result-section">
+        <div class="result-section-title">Filler words &amp; hedging</div>
+        <div class="filler-list" id="fillerList"></div>
+      </div>
+
+      <!-- Advice -->
+      <div class="result-section">
+        <div class="result-section-title">How to improve</div>
+        <ul class="advice-list" id="adviceList"></ul>
+      </div>
+
+      <button class="btn-reset" id="resetBtn">↩ Try another topic</button>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>VoiceGrade</span> — Built for students who actually want to learn. &nbsp;·&nbsp; Powered by Claude AI
+  </div>
+</footer>
+
+<script>
+// ─── Waveform setup ───────────────────────────────────────────────────────────
+const waveformEl = document.getElementById('waveform');
+const BAR_COUNT = 48;
+const bars = [];
+for (let i = 0; i < BAR_COUNT; i++) {
+  const b = document.createElement('div');
+  b.className = 'wave-bar';
+  waveformEl.appendChild(b);
+  bars.push(b);
+}
+
+let waveInterval = null;
+function startWave() {
+  bars.forEach(b => b.classList.add('active'));
+  waveInterval = setInterval(() => {
+    bars.forEach(b => { b.style.height = (4 + Math.random() * 38) + 'px'; });
+  }, 80);
+}
+function stopWave() {
+  clearInterval(waveInterval);
+  bars.forEach(b => { b.classList.remove('active'); b.style.height = '4px'; });
+}
+
+// ─── Timer ────────────────────────────────────────────────────────────────────
+let timerInterval = null, seconds = 0;
+const recTimerEl = document.getElementById('recTimer');
+function startTimer() {
+  seconds = 0;
+  recTimerEl.classList.add('active');
+  timerInterval = setInterval(() => {
+    seconds++;
+    const m = Math.floor(seconds / 60), s = seconds % 60;
+    recTimerEl.textContent = m + ':' + String(s).padStart(2,'0');
+  }, 1000);
+}
+function stopTimer() {
+  clearInterval(timerInterval);
+  recTimerEl.classList.remove('active');
+}
+
+// ─── Recording & Speech Recognition ──────────────────────────────────────────
+let recognition = null, isRecording = false;
+let fullTranscript = '';
+const recordBtn = document.getElementById('recordBtn');
+const recStatusText = document.getElementById('recStatusText');
+const transcriptBox = document.getElementById('transcriptBox');
+const transcriptNote = document.getElementById('transcriptNote');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const recIcon = document.getElementById('recIcon');
+
+const STOP_ICON = `<rect x="6" y="6" width="12" height="12" rx="2"/>`;
+const REC_ICON = `<circle cx="12" cy="12" r="6"/>`;
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+recordBtn.addEventListener('click', () => {
+  if (!SpeechRecognition) {
+    transcriptNote.textContent = '⚠ Speech recognition not supported in this browser. Please type your explanation above.';
+    transcriptBox.textContent = '';
+    transcriptBox.focus();
+    checkReady();
+    return;
+  }
+  if (!isRecording) startRecording();
+  else stopRecording();
+});
+
+function startRecording() {
+  fullTranscript = '';
+  transcriptBox.textContent = '🎙 Listening…';
+
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+
+  recognition.onresult = (e) => {
+    let interim = '', final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += t + ' ';
+      else interim += t;
+    }
+    fullTranscript += final;
+    transcriptBox.textContent = fullTranscript + interim;
+    checkReady();
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error === 'no-speech') return;
+    recStatusText.textContent = 'Mic error: ' + e.error + '. Try typing instead.';
+  };
+
+  recognition.onend = () => {
+    if (isRecording) recognition.start(); // keep going
+  };
+
+  recognition.start();
+  isRecording = true;
+  recordBtn.classList.add('recording');
+  recIcon.innerHTML = STOP_ICON;
+  recStatusText.textContent = 'Recording… speak clearly';
+  startTimer(); startWave();
+}
+
+function stopRecording() {
+  recognition && recognition.stop();
+  isRecording = false;
+  recordBtn.classList.remove('recording');
+  recIcon.innerHTML = REC_ICON;
+  recStatusText.textContent = 'Recording stopped';
+  stopTimer(); stopWave();
+  if (fullTranscript.trim()) {
+    transcriptBox.textContent = fullTranscript.trim();
+    transcriptNote.textContent = `✦ ${seconds}s recorded — ${fullTranscript.trim().split(/\s+/).length} words`;
+  } else {
+    transcriptBox.textContent = '';
+    transcriptNote.textContent = '⚠ No speech detected. Please type your explanation above.';
+  }
+  checkReady();
+}
+
+function checkReady() {
+  const hasText = transcriptBox.textContent.trim().length > 20 &&
+    transcriptBox.textContent !== 'Your spoken words will appear here automatically after recording. You can also type or paste your explanation directly.';
+  analyzeBtn.disabled = !hasText;
+}
+
+transcriptBox.addEventListener('input', checkReady);
+transcriptBox.addEventListener('focus', () => {
+  if (transcriptBox.textContent.startsWith('Your spoken')) {
+    transcriptBox.textContent = '';
+  }
+});
+
+// ─── Analyze ──────────────────────────────────────────────────────────────────
+const loadingEl = document.getElementById('loading');
+const resultsEl = document.getElementById('results');
+const errorBox = document.getElementById('errorBox');
+
+analyzeBtn.addEventListener('click', async () => {
+  const topic = document.getElementById('topicInput').value.trim() || 'an unspecified topic';
+  const explanation = transcriptBox.textContent.trim();
+  const apiKey = document.getElementById('apiKey').value.trim();
+
+  if (!apiKey) {
+    showError('Please enter your Anthropic API key above.');
+    return;
+  }
+  if (explanation.split(/\s+/).length < 10) {
+    showError('Your explanation is too short. Please say at least a few sentences.');
+    return;
+  }
+
+  hideError();
+  analyzeBtn.disabled = true;
+  loadingEl.classList.add('visible');
+  resultsEl.classList.remove('visible');
+
+  const prompt = `You are an expert educator grading a student's spoken explanation using the Feynman Technique.
+
+Topic the student was asked to explain: "${topic}"
+
+Student's explanation:
+"""
+${explanation}
+"""
+
+Evaluate their understanding and return a JSON object with EXACTLY these fields (no extra text, no markdown fences):
+{
+  "score": <integer 0-100>,
+  "clarity": <integer 0-100>,
+  "accuracy": <integer 0-100>,
+  "depth": <integer 0-100>,
+  "grade": <"A" | "B" | "C">,
+  "summary": "<2-3 sentence honest assessment of their understanding>",
+  "strengths": ["<concept they explained well>", ...] (2-4 items),
+  "gaps": ["<specific concept they missed or got wrong>", ...] (2-5 items),
+  "fillerWords": ["<filler or hedging word/phrase they overused>", ...] (0-5 items, e.g. "like", "um", "kind of", "I think", "sort of"),
+  "advice": ["<specific actionable study tip>", "<another tip>", "<another tip>"] (3 items)
+}
+
+Be honest and specific. A score above 80 should be rare and only for genuinely excellent explanations. Identify real gaps, not imaginary ones.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error?.message || 'API error ' + res.status);
+    }
+
+    const data = await res.json();
+    const raw = data.content[0].text.trim().replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(raw);
+    renderResults(parsed);
+  } catch (e) {
+    showError('Error: ' + e.message);
+  } finally {
+    loadingEl.classList.remove('visible');
+    analyzeBtn.disabled = false;
+    checkReady();
+  }
+});
+
+function renderResults(d) {
+  // Score ring
+  const circumference = 2 * Math.PI * 35; // ~220
+  const offset = circumference - (d.score / 100) * circumference;
+  const circle = document.getElementById('scoreCircle');
+  circle.style.strokeDasharray = circumference;
+  circle.style.strokeDashoffset = circumference;
+  setTimeout(() => { circle.style.strokeDashoffset = offset; }, 100);
+
+  // Score color
+  if (d.score >= 75) circle.style.stroke = 'var(--accent)';
+  else if (d.score >= 50) circle.style.stroke = 'var(--accent2)';
+  else circle.style.stroke = 'var(--accent3)';
+
+  document.getElementById('scoreNum').textContent = d.score;
+
+  const gradeEl = document.getElementById('gradeLabel');
+  gradeEl.textContent = d.grade === 'A' ? 'Strong' : d.grade === 'B' ? 'Developing' : 'Needs Work';
+  gradeEl.className = 'grade-label grade-' + d.grade;
+
+  document.getElementById('metClarity').textContent = d.clarity;
+  document.getElementById('metAccuracy').textContent = d.accuracy;
+  document.getElementById('metDepth').textContent = d.depth;
+  document.getElementById('summaryText').textContent = d.summary;
+
+  // Strengths
+  const sl = document.getElementById('strengthsList');
+  sl.innerHTML = '';
+  (d.strengths || []).forEach(s => {
+    const c = document.createElement('div'); c.className = 'strength-chip'; c.textContent = s; sl.appendChild(c);
+  });
+
+  // Gaps
+  const gl = document.getElementById('gapsList');
+  gl.innerHTML = '';
+  (d.gaps || []).forEach(g => {
+    const c = document.createElement('div'); c.className = 'gap-chip'; c.textContent = g; gl.appendChild(c);
+  });
+
+  // Filler words
+  const fl = document.getElementById('fillerList');
+  fl.innerHTML = '';
+  if (!d.fillerWords || d.fillerWords.length === 0) {
+    const c = document.createElement('div'); c.className = 'filler-word'; c.textContent = 'No significant filler words 🎉'; fl.appendChild(c);
+  } else {
+    d.fillerWords.forEach(f => {
+      const c = document.createElement('div'); c.className = 'filler-word'; c.textContent = f; fl.appendChild(c);
+    });
+  }
+
+  // Advice
+  const al = document.getElementById('adviceList');
+  al.innerHTML = '';
+  (d.advice || []).forEach(a => {
+    const li = document.createElement('li'); li.textContent = a; al.appendChild(li);
+  });
+
+  resultsEl.classList.add('visible');
+  resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function showError(msg) { errorBox.textContent = msg; errorBox.classList.add('visible'); }
+function hideError() { errorBox.classList.remove('visible'); }
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  resultsEl.classList.remove('visible');
+  transcriptBox.textContent = 'Your spoken words will appear here automatically after recording. You can also type or paste your explanation directly.';
+  document.getElementById('topicInput').value = '';
+  recTimerEl.textContent = '0:00';
+  recStatusText.textContent = 'Press to start recording';
+  analyzeBtn.disabled = true;
+  fullTranscript = '';
+  seconds = 0;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+</script>
+</body>
+</html>
